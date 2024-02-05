@@ -1,2 +1,2 @@
 # xai
-Explainable AI for Rafael paintings
+Explainable AI for Raphael paintings
