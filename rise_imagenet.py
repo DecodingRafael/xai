@@ -18,13 +18,12 @@ import dianna
 from dianna import visualization
 
 # for plotting
-from matplotlib import pyplot as plt
-
-
 def main(
-        image_path: Path = Path('0_Edinburgh_Nat_Gallery.jpg'),
+        image_path: Path = Path('../data/0_Edinburgh_Nat_Gallery.jpg'),
+        resnet50_path: Path = Path("../data/resnet50_model.h5"),
+        model_path: Path = Path("../data/28_09_2023_svm_final_model.pkl"),
         p_keep: float = 0.1,
-        n_masks: int = 1000,
+        n_masks: int = 10,
         feature_res: int = 6,
         file_name_appendix:str=None,
          ):
@@ -35,8 +34,8 @@ def main(
 
     class Model():
         def __init__(self):
-            ResNet_Path = Path("resnet50_model.h5")
-            Model_Path = Path("28_09_2023_svm_final_model.pkl")
+            ResNet_Path = resnet50_path
+            Model_Path = model_path
             K.set_learning_phase(0)
             self.resnet_model = load_model(ResNet_Path)
 
@@ -56,9 +55,9 @@ def main(
             test_image_features = self.extract_features(x, model)
 
             # Use the loaded model to predict the category of the test image
-            predictions = self.svm_final.predict(test_image_features)
+            predictions = self.svm_final.predict_proba(test_image_features)
 
-            return np.array([[prediction, 1 - prediction] for prediction in predictions])
+            return np.array(predictions)
 
     model = Model()
 
@@ -108,16 +107,20 @@ def main(
 
     # Visualize the relevance scores for the predicted class on top of the input image.
     predictions = model.run_on_batch(x[None, ...])
-    prediction_ids = np.argsort(predictions)[0][-1:-6:-1]
-    prediction_ids
+    print('predictions:', predictions)
 
+    file_name_elements = [image_path.name,
+                          'nmasks', str(n_masks),
+                          'pkeep', str(p_keep),
+                          'res', str(feature_res)
+                          ]
     file_name_base = '_'.join(file_name_elements)
+
     for class_idx in labels:
         relevance_map = relevances[class_idx]
         print(f'Explanation for `{class_name(class_idx)}` ({predictions[0][class_idx]}), '
               f'relevances: min={np.min(relevance_map)}, max={np.max(relevance_map)}, mean={np.mean(relevance_map)}')
 
-        file_name_elements = [image_path, nmasks, n_masks, pkeep, p_keep, res, feature_res]
         if file_name_appendix:
             file_name_elements.append(file_name_appendix)
         visualization.plot_image(relevance_map, utils.img_to_array(img) / 255., heatmap_cmap='jet',
