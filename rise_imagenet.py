@@ -87,12 +87,6 @@ def main(
 
     # takes about 35-40 minutes to run
     labels = [0, 1]
-    relevances = dianna.explain_image(model.run_on_batch, x, method="RISE",
-                                      labels=labels,
-                                      n_masks=n_masks, feature_res=feature_res, p_keep=p_keep,
-                                      axis_labels={2: 'channels'})
-
-    # Make predictions and select the top prediction.
     def class_name(idx):
         if idx == 0:
             name = 'Raphael'
@@ -102,6 +96,19 @@ def main(
             name = f'class_idx={idx}'
         return name
 
+    file_name_elements = [image_path.name,
+                          'nmasks', str(n_masks),
+                          'pkeep', str(p_keep),
+                          'res', str(feature_res)
+                          ]
+    file_name_base = '_'.join(file_name_elements)
+
+    relevances = dianna.explain_image(model.run_on_batch, x, method="RISE",
+                                      labels=labels,
+                                      n_masks=n_masks, feature_res=feature_res, p_keep=p_keep,
+                                      axis_labels={2: 'channels'})
+    # Make predictions and select the top prediction.
+
     # print the name of predicted class, taking care of adding a batch axis to the model input
     class_name(np.argmax(model.run_on_batch(x[None, ...])))
 
@@ -109,12 +116,6 @@ def main(
     predictions = model.run_on_batch(x[None, ...])
     print('predictions:', predictions)
 
-    file_name_elements = [image_path.name,
-                          'nmasks', str(n_masks),
-                          'pkeep', str(p_keep),
-                          'res', str(feature_res)
-                          ]
-    file_name_base = '_'.join(file_name_elements)
 
     for class_idx in labels:
         relevance_map = relevances[class_idx]
@@ -139,4 +140,7 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    for n_masks in [2000]:
+        for p_keep in [0.7, 0.9, 0.95]:
+            for feature_res in [6]:
+                main(n_masks=n_masks, p_keep=p_keep, feature_res=feature_res)
