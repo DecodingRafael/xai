@@ -7,7 +7,6 @@ from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_
 from keras import backend as K
 
 
-
 class Model:
     def __init__(self):
         resnet50_path: Path = Path("../data/resnet50_model.h5")
@@ -19,7 +18,6 @@ class Model:
         # Load the final model
         self.svm_final = joblib.load(Model_Path)
         self.input_size = (224, 224)
-
 
     def extract_features(self, img):
         preprocess_input = resnet50_preprocess_input(img)

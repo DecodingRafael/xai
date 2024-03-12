@@ -2,6 +2,7 @@
 
 import warnings
 from model import Model
+
 warnings.filterwarnings('ignore')  # disable warnings relateds to versions of tf
 import numpy as np
 from pathlib import Path
@@ -9,15 +10,15 @@ from keras import utils
 import dianna
 from dianna import visualization
 
+
 # for plotting
 def main(
         image_path: Path = Path('../data/0_Edinburgh_Nat_Gallery.jpg'),
         p_keep: float = 0.1,
         n_masks: int = 10,
         feature_res: int = 6,
-        file_name_appendix:str=None,
-         ):
-
+        file_name_appendix: str = None,
+):
     model = Model()
     img, x = load_img(image_path)
 
@@ -58,6 +59,7 @@ def load_img(path):
     x = utils.img_to_array(img)
     return img, x
 
+
 def class_name(idx):
     if idx == 0:
         name = 'Raphael'
@@ -67,16 +69,17 @@ def class_name(idx):
         name = f'class_idx={idx}'
     return name
 
+
 if __name__ == "__main__":
     is_classification_run = False
     if is_classification_run:
         model = Model()
         img, x = load_img(Path('../data/0_Edinburgh_Nat_Gallery.jpg'))
-        result = model.run_on_batch(x[None,...])
+        result = model.run_on_batch(x[None, ...])
         print(result)
 
     else:
         for n_masks in [100, 300, 1000, 3000]:
-            for p_keep in [0.5]:
-                for feature_res in [6]:
+            for p_keep in [0.7, 0.9, 0.95]:
+                for feature_res in [3, 6, 12]:
                     main(n_masks=n_masks, p_keep=p_keep, feature_res=feature_res)
