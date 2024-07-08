@@ -1,6 +1,10 @@
 # https://colab.research.google.com/github/dianna-ai/dianna/blob/main/tutorials/rise_imagenet.ipynb#scrollTo=ab3bd199
 
 import warnings
+from typing import Optional
+
+import pandas as pd
+
 from model import Model
 
 warnings.filterwarnings('ignore')  # disable warnings relateds to versions of tf
@@ -12,26 +16,16 @@ from dianna import visualization
 
 
 # for plotting
-def main(
+def explain_painting(
         image_path: Path = Path('../data/0_Edinburgh_Nat_Gallery.jpg'),
         p_keep: float = 0.1,
         n_masks: int = 10,
         feature_res: int = 6,
-        file_name_appendix: str = None,
+        file_name_appendix: Optional[str] = None,
 ):
     model = Model()
-    img, x = load_img(image_path)
-
-    print(f"{model.run_on_batch(x[None, ...]).shape=}")
     labels = [0, 1]
-
-    file_name_elements = [image_path.name,
-                          'nmasks', str(n_masks),
-                          'pkeep', str(p_keep),
-                          'res', str(feature_res)
-                          ]
-
-    file_name_base = '_'.join(file_name_elements)
+    file_name_base = create_file_name_base(feature_res, file_name_appendix, image_path, n_masks, p_keep)
     relevances = dianna.explain_image(model.run_on_batch, x, method="RISE",
                                       labels=labels,
                                       n_masks=n_masks, feature_res=feature_res, p_keep=p_keep,
@@ -47,11 +41,20 @@ def main(
         print(f'Explanation for `{class_name(class_idx)}` ({predictions[0][class_idx]}), '
               f'relevances: min={np.min(relevance_map)}, max={np.max(relevance_map)}, mean={np.mean(relevance_map)}')
 
-        if file_name_appendix:
-            file_name_elements.append(file_name_appendix)
         visualization.plot_image(relevance_map, utils.img_to_array(img) / 255., heatmap_cmap='jet',
                                  output_filename=file_name_base + f'_{class_name(class_idx)}.png', show_plot=False)
     np.savez_compressed(file_name_base + '.npz', relevances=relevances)
+
+
+def create_file_name_base(feature_res, file_name_appendix, image_path, n_masks, p_keep):
+    file_name_elements = [image_path.name,
+                          'nmasks', str(n_masks),
+                          'pkeep', str(p_keep),
+                          'res', str(feature_res)
+                          ]
+    if file_name_appendix:
+        file_name_elements.append(file_name_appendix)
+    return '_'.join(file_name_elements)
 
 
 def load_img(path):
@@ -71,15 +74,36 @@ def class_name(idx):
 
 
 if __name__ == "__main__":
-    is_classification_run = False
+    is_classification_run = True
     if is_classification_run:
-        model = Model()
-        img, x = load_img(Path('../data/0_Edinburgh_Nat_Gallery.jpg'))
-        result = model.run_on_batch(x[None, ...])
-        print(result)
+        paths = [Path(p) for p in ['../data/0_Edinburgh_Nat_Gallery.jpg',
+                                   '../data/Madrid_Prado.jpg',
+                                   '../data/0_Edinburgh_Nat_Gallery_100x100.jpg',
+                                   '../data/Italian_Holy_Family_with_the_lamb_replica.jpg',
+                                   '../data/Italian_Holy_Family_with_the_lamb_replica_100x100.jpg',
+                                   "../data/Not Rapheal/Lely #3 - Mary Framington - Christie's sale- edited copy.jpg",
+                                   ]]
+        results = []
+        for path in paths:
+            model = Model()
+
+            result = model.run_on_batch(path)
+            results.append(result)
+
+        for path, result in zip(paths, results):
+            print(f'{result=}')
+            print(f'{path=}')
+            print(pd.DataFrame([result], columns=[class_name(idx) for idx in [0, 1]]))
 
     else:
-        for n_masks in [100, 300, 1000, 3000]:
-            for p_keep in [0.7, 0.9, 0.95]:
-                for feature_res in [3, 6, 12]:
-                    main(n_masks=n_masks, p_keep=p_keep, feature_res=feature_res)
+        painting_paths = [Path(p) for p in ['../data/0_Edinburgh_Nat_Gallery.jpg', '../data/Madrid_Prado.jpg']]
+        for painting_path in painting_paths:
+            for n_masks in [10]:  #5000
+                for p_keep in [0.7, 0.9, 0.95]:
+                    for feature_res in [3, 6, 12]:
+                        for run in range(3):
+                            explain_painting(n_masks=n_masks,
+                                             p_keep=p_keep,
+                                             feature_res=feature_res,
+                                             file_name_appendix=str(run),
+                                             image_path=painting_path)
