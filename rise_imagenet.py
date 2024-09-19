@@ -1,5 +1,3 @@
-# https://colab.research.google.com/github/dianna-ai/dianna/blob/main/tutorials/rise_imagenet.ipynb#scrollTo=ab3bd199
-
 import warnings
 warnings.filterwarnings('ignore')  # disable warnings relateds to versions of tf
 from typing import Optional
@@ -24,22 +22,25 @@ def explain_painting(
     model = Model()
     labels = [0, 1]
     
-    file_name_base = create_file_name_base(feature_res, file_name_appendix, image_path, n_masks, p_keep)
-        
-    # The image will be read as a numpy array (in BGR format by default)
-    x = cv2.imread(str(image_path))  # Convert Path to string
+    file_name_base = create_file_name_base(feature_res, file_name_appendix, image_path, n_masks, p_keep)      
+    
+    x = cv2.imread(str(image_path))    
 
     if x is None:
-        raise ValueError(f"Image not found at {image_path}")
+        raise ValueError(f"Image not found at {image_path}")    
 
-    # Convert the image from BGR to RGB if needed
-    x = cv2.cvtColor(x, cv2.COLOR_BGR2RGB)
-
+    x_input = np.expand_dims(x, axis=0)  # Shape: (1, 800, 540, 3)
     print("----------------")
-    print(f"Image type: {type(x)}, Image shape: {x.shape}")
+    print(f"Image type: {type(x_input)}, Image shape: {x_input.shape}")
         
-    relevances = dianna.explain_image(model.run_on_batch, 
-                                      x, # input_image : np.ndarray (Image data to be explained)                                      
+    x_input_gray = np.mean(x_input, axis=-1, keepdims=True)  # Shape will now be (1, 800, 540, 1)
+    print(f"Grayscale Image shape: {x_input_gray.shape}")
+
+    x_input_rgb = np.repeat(x_input_gray, 3, axis=-1)  # Shape: (1, 800, 540, 3)
+    print(f"RGB Image shape after conversion: {x_input_rgb.shape}")      
+                
+    relevances = dianna.explain_image(model.run_on_batch,
+                                      x_input_rgb, # input_image in np.ndarray                                     
                                       method = "RISE",
                                       labels = labels,
                                       n_masks = n_masks, 
@@ -50,15 +51,13 @@ def explain_painting(
     class_name(np.argmax(model.run_on_batch(x[None, ...])))
 
     # Visualize the relevance scores for the predicted class on top of the input image.
-    predictions = model.run_on_batch(x[None, ...])
+    predictions = model.run_on_batch(x_input)
 
     for class_idx in labels:
         relevance_map = relevances[class_idx]
         print(f'Explanation for `{class_name(class_idx)}` ({predictions[0][class_idx]}), '
               f'relevances: min={np.min(relevance_map)}, max={np.max(relevance_map)}, mean={np.mean(relevance_map)}')
-
-        # Use OpenCV to normalize and save the image (replace utils.img_to_array)
-        # Assuming img is the original image already in np.ndarray
+        
         img_normalized = x / 255.0  # OpenCV loads in range [0, 255], normalize to [0, 1] 
         
         visualization.plot_image(relevance_map, img_normalized, heatmap_cmap='jet',
@@ -96,7 +95,7 @@ def class_name(idx):
 if __name__ == "__main__":
     
     # set to True to test. If correct, set to false asnd run real analysis
-    is_classification_run = True
+    is_classification_run = False
     
     if is_classification_run:
         paths = [Path(p) for p in ['data/0_Edinburgh_Nat_Gallery.jpg',
@@ -121,11 +120,11 @@ if __name__ == "__main__":
     else:
         painting_paths = [Path(p) for p in ['data/0_Edinburgh_Nat_Gallery.jpg', 'data/Madrid_Prado.jpg']]
         for painting_path in painting_paths:
-            for n_masks in [10]:  #5000 ipv 10 in case code is correct; results are then more stable. start with 500, when the image doens not change, 500 would be enough 
+            for n_masks in [2]:  #5000 ipv 10 in case code is correct; results are then more stable. start with 500, when the image doens not change, 500 would be enough 
                 # alleen 0.7; 1 waarde kiezen voor bij final run
-                for p_keep in [0.7, 0.9, 0.95]: # verhouding mask vs non mask pixels
+                for p_keep in [0.7]: # verhouding mask vs non mask pixels
                     #alleen 3 ; 1 waarde kiezen voor bij final run
-                    for feature_res in [3, 6, 12]: # als je maskeert, wil je groepen maskeren die naast gelegen zijn
+                    for feature_res in [3]: # als je maskeert, wil je groepen maskeren die naast gelegen zijn
                         for run in range(3):
                             # heatmaps for the painting indicating the relevance of each pixel for the prediction
                             explain_painting(image_path         = painting_path,

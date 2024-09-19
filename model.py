@@ -2,32 +2,35 @@ from pathlib import Path
 import joblib
 from tensorflow.keras.models import load_model
 import numpy as np
-
-#from keras import backend as K
 import cv2
 import glob
 import pandas as pd
-#from PIL import Image
-#import matplotlib.pyplot as plt
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess_input
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.models import load_model
 import math
 from diskcache import Cache
 
-
 class Model:
     def __init__(self):
         pass
 
     def extract_features(self, img):
-        preprocess_input = resnet50_preprocess_input(img)
+        preprocess_input = preprocess_input(img)
         return self.resnet_model.predict(preprocess_input)
 
     def run_on_batch(self, x):
-        predictions = compare_image_with_dataset(x, 'data/Not Rapheal/')
+        predictions = compare_image_with_dataset(x, '../data/Not Rapheal/')
         return np.array(predictions)
+    
+    # def run_on_batch(self, x):
+    #     # Reshape input if necessary (from masks or other sources)
+    #     if len(x.shape) == 5:
+    #         x = np.reshape(x, (-1, x.shape[2], x.shape[3], x.shape[4]))
+    
+    #     predictions = compare_image_with_dataset(x, 'data/Not Rapheal/')    
+    #     return np.array(predictions)
+
 
 cache = Cache('my_cache_directory')
 
@@ -49,17 +52,22 @@ def scale_inverse_log(x, x_min, x_max, y_min, y_max):
     return y
 
 
-# Function to load and preprocess image
-def load_and_preprocess_image(img_path):
-    img = keras_image.load_img(img_path, target_size=(224, 224))
-    img = keras_image.img_to_array(img)
-    img = np.expand_dims(img, axis=0)
-    return preprocess_input(img)
-
-
 def extract_features(img_path, model):
-    img = load_and_preprocess_image(img_path)
+    img = img_path
+    
+    # If img has extra dimensions (like masks), flatten it before passing to the model
+    #if len(img.shape) == 5:
+    #    img = np.reshape(img, (-1, img.shape[2], img.shape[3], img.shape[4]))
+    
+    # Expand dimensions if needed (batch size dimension)
+    if len(img.shape) == 3:
+        img = np.expand_dims(img, axis=0)
+    
+    img = preprocess_input(img)
+    
     features = model.predict(img)
+    
+    # If features need reshaping (optional, depending on model output)
     return features.reshape(-1)
 
 
@@ -118,7 +126,8 @@ def compare_image_with_dataset(test_image_path, image_dir):
 
 
     # Load test image
-    test_image = cv2.imread(str(test_image_path))
+    #test_image = cv2.imread(str(test_image_path))
+    test_image =  test_image_path # numpy array
 
     # Load the final model
     svm_final = joblib.load(Model_Path)
