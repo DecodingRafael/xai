@@ -1,17 +1,15 @@
 from pathlib import Path
-
 import joblib
 from tensorflow.keras.models import load_model
 import numpy as np
-from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess_input
-from keras import backend as K
+
+#from keras import backend as K
 import cv2
-import numpy as np
 import glob
-import joblib
 import pandas as pd
-from PIL import Image
-import matplotlib.pyplot as plt
+#from PIL import Image
+#import matplotlib.pyplot as plt
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet50_preprocess_input
 from tensorflow.keras.preprocessing import image as keras_image
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.models import load_model
@@ -28,13 +26,10 @@ class Model:
         return self.resnet_model.predict(preprocess_input)
 
     def run_on_batch(self, x):
-        predictions = compare_image_with_dataset(x, '../data/Not Rapheal/')
+        predictions = compare_image_with_dataset(x, 'data/Not Rapheal/')
         return np.array(predictions)
 
-
-
-cache = Cache('./my_cache_directory')
-
+cache = Cache('my_cache_directory')
 
 def scale_inverse_log(x, x_min, x_max, y_min, y_max):
     # Check input boundaries
@@ -116,8 +111,8 @@ def calculate_features(img):
 
 
 def compare_image_with_dataset(test_image_path, image_dir):
-    resnet50_path: Path = Path("../data/resnet50_model.h5")
-    model_path: Path = Path("../data/28_09_2023_svm_final_model.pkl")
+    resnet50_path: Path = Path("models/resnet50_model.h5")
+    model_path: Path = Path("models/28_09_2023_svm_final_model.pkl")
     Model_Path = model_path
     ResNet_Path = resnet50_path
 
@@ -177,13 +172,14 @@ def compare_image_with_dataset(test_image_path, image_dir):
     # Sum of differences
     mean_diff = np.mean(difference)
 
-    if mean_diff < 50:
+    # adjusted values based on update in original code
+    if mean_diff < 99:
         mean_diff = 400
-        probabilities[0] = probabilities[0] - 0.3
+        probabilities[0] = probabilities[0] - 0.5
 
     if mean_diff > 400:
         mean_diff = 400
-        probabilities[0] = probabilities[0] - 0.3
+        probabilities[0] = probabilities[0] - 0.5
 
     if mean_diff < 150:
         mean_diff = 150
